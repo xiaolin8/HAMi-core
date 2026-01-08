@@ -585,18 +585,20 @@ CUresult cuMemAddressReserve(CUdeviceptr* ptr, size_t size,
 }
 
 CUresult cuMemCreate ( CUmemGenericAllocationHandle* handle, size_t size, const CUmemAllocationProp* prop, unsigned long long flags ) {
-    LOG_INFO("cuMemCreate:%lld:%d", size, prop->location.id);
+    LOG_INFO("into cuMemCreate:");
     ENSURE_RUNNING();
-    CUdevice dev;
-    CUDA_OVERRIDE_CALL(cuda_library_entry, cuCtxGetDevice, &dev);
-    if (oom_check(dev, size)) {
-        return CUDA_ERROR_OUT_OF_MEMORY;
-    }
-    CUresult res = CUDA_OVERRIDE_CALL(cuda_library_entry,
-        cuMemCreate, handle, size, prop, flags);
-    if (res == CUDA_SUCCESS) {
-        add_chunk_only(*handle, size);
-    }
+    CUresult res = allocate_virtual_memory_management(handle,size,prop,flags);
+    if (res!=CUDA_SUCCESS)
+        return res;
+    LOG_INFO("cuMemCreate success with bytesize=%lu", size);
+    return res;
+}
+
+CUresult cuMemUnmap( CUdeviceptr ptr, size_t size ) {
+    LOG_INFO("into cuMemUnmap:");
+    ENSURE_RUNNING();
+    CUresult res = remove_virtual_memory_management(ptr,size);
+    LOG_DEBUG("cuMemUnmap: dptr=%p size=%ld res=%d",(void *)ptr,size,res);
     return res;
 }
 
